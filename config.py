@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 basedir = os.path.abspath(os.path.dirname(__file__))
 instancedir = os.path.join(basedir, 'instance')
 backupdir = os.path.join(instancedir, 'backups')
-load_dotenv(os.path.join(instancedir, '.env'))
+load_dotenv(os.path.join(instancedir, 'chies.env'))
 
 class Config:
     FLASK_APP = os.environ.get("FLASK_APP")
