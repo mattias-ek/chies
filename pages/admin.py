@@ -38,17 +38,14 @@ def all_edits():
 @admin.route('/signup_link')
 @auth.moderator_required
 def signup_link():
-    link = flask.url_for("user.signup", signup_key=database.Attrs.get("signup_key"), _external=True)
-    render.flash_message(
-        f'The signup link is: {link}')
-    return render.template('base.html')
+    return render.template('base.html', markdown=markdown_signup_link())
 
 @admin.route('/signup_link/update')
 @auth.admin_required
 def update_signup_link():
     database.Attrs.set('signup_key', secrets.token_urlsafe())
     render.flash_success('Signup key updated')
-    render.redirect('admin.signup_link')
+    return render.redirect('admin.signup_link')
 
 @admin.route('/change_role', methods=['GET', 'POST'])
 @auth.admin_required
@@ -68,3 +65,13 @@ def change_role():
             user.update_entry(user, auth_level=new_auth_level)
             render.flash_success('User role changed')
     return render.template('form.html', form=form)
+
+############
+### Text ###
+############
+def markdown_signup_link():
+    return dict(before_content=f"""
+    The signup link is: {flask.url_for("user.signup", signup_key=database.Attrs.get("signup_key"), _external=True)}
+    
+    To create a new signup link click [here]({flask.url_for("admin.update_signup_link")}).
+    """)
