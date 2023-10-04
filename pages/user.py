@@ -39,6 +39,10 @@ class ChangePasswordForm(forms.FlaskForm):
 
 @user.route('/login', methods=['GET', 'POST'])
 def login():
+    if auth.current_user.is_active:
+        render.flash_error('You are already signed in')
+        return render.redirect('main.search')
+
     form = LoginForm()
     if form.validate_on_submit():
         user = database.User.get_one(email=form.email.data, or_none=True)
@@ -65,6 +69,10 @@ def logout():
 
 @user.route('/signup', methods=['GET', 'POST'])
 def signup():
+    if auth.current_user.is_active:
+        render.flash_error('Sign out to create a new account')
+        return render.redirect('main.search')
+
     signup_key = flask.request.args.get('signup_key')
     if signup_key is None:
         render.flash_error('Sign ups are invite only. Contact an administrator to sign up.')
