@@ -1,0 +1,10 @@
+flask==2.3.3
+werkzeug==2.3.7
+flask-wtf==1.2.1
+wtforms==3.0.1
+bootstrap-flask==2.3.0
+flask-login==0.6.2
+flask-sqlalchemy==3.1.1
+markdown==3.4.4
+python-dotenv==1.0.0
+email_validator==2.0.0

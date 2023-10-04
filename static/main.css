@@ -1,0 +1,28 @@
+.padded {
+     padding: 10px;
+     }
+
+.padded-a {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.padding-logo {
+    padding-left: 30px;
+}
+
+.grid-menu1 {
+  display: grid;
+  grid-template-columns: 210px auto;
+}
+
+.grid-menu2 {
+  display: grid;
+  grid-template-columns: auto;
+  align-content: center;
+}
+
+.chetec-blue {
+    color: white;
+    background-color: #0062a8;
+    }

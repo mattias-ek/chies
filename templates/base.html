@@ -1,0 +1,108 @@
+{% from 'bootstrap5/nav.html' import render_nav_item %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title style="text-align: center;">ChETEC-Infra Element Search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+
+    {{ bootstrap.load_css() }}
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="grid-menu1 chetec-blue">
+        <div class="padding-logo">
+            <img width="150" src="https://www.chetec-infra.eu/wp-content/uploads/2021/05/cropped-Logo_special_square.png">
+        </div>
+        <div class="grid-menu2">
+            <h1>Element Search</h1>
+            <!--- The menu doesn't show when collapes-->
+            <nav class="navbar navbar-expand-lg navbar-dark">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('main.search') }}">Search</a>
+                        </li>
+                        {% if current_user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDataManagement"
+                               role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Data Management
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarDataManagement">
+                                <a class="dropdown-item" href="{{ url_for('dm.add_citation') }}">Add Citation</a>
+                                <a class="dropdown-item" href="{{ url_for('dm.add_data') }}">Add Element Data</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{{ url_for('dm.edit') }}">Edit Data</a>
+
+                            </div>
+                        </li>
+                        {% if current_user.auth_level >= user_role.moderator %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarAdmin"
+                               role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Admin
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarAdmin">
+                                <a class="dropdown-item" href="{{ url_for('admin.change_role') }}">Change User Role</a>
+                                <a class="dropdown-item" href="{{ url_for('admin.signup_link') }}">Signup Link</a>
+                                <a class="dropdown-item" href="{{ url_for('admin.update_signup_link') }}">Update Signup link</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{{ url_for('admin.all_edits') }}">View Edits</a>
+                            </div>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarUser"
+                               role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                {{ current_user.name }}
+                            </a>
+                            <div class="dropdown-menu" aria-labelledby="navbarUser">
+                                <a class="dropdown-item" href="{{ url_for('user.change_password') }}">Change Password</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{{ url_for('user.logout') }}">Logout</a>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user.login') }}">Login</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+    <div class="padded">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category == 'success' %}
+                        <p class="alert alert-success" role="alert">{{ message }}</p>
+                    {% elif category == 'error' %}
+                        <p class="alert alert-danger" role="alert">{{ message }}</p>
+                    {% else %}
+                        <p class="alert alert-primary" role="alert">{{ message }}</p>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        </div>
+        <div id="content" class="padded">{% block content %}{% endblock %}</div>
+        {% block footer %}
+        <br>
+        <p>© Copyright 2023 by Mattias Ek, ETH Zürich</p>
+        {% endblock %}
+        </div>
+        {% block scripts %}
+            {{ bootstrap.load_js() }}
+        {% endblock %}
+        </body>
+</html>

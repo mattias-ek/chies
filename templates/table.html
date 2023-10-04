@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block head %}
+    {{ super() }}
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+    {{ before_table|safe }}
+    <div>
+        <div id="table"></div>
+    </div>
+    {{ after_table|safe }}
+
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    <script>
+        new gridjs.Grid({
+            columns: [
+                {{ table_columns|safe }}
+            ],
+            data: [
+                {{ table_data|safe  }}
+            ],
+            search: {{ table_search or false }},
+            sort: true,
+            pagination: {{ table_pagination }}
+        }).render(document.getElementById('table'));
+    </script>
+{% endblock %}

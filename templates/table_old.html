@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IsoriteDB</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.0.1/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.0/css/dataTables.bootstrap5.min.css">
+</head>
+<body>
+    This is a prototype.
+    <hr>
+
+    <div class="container">
+        <table id="data" class="table table-striped", style="width:100%">
+            <thead>
+                <tr>
+                    <th>Authors</th>
+                    <th>Year</th>
+                    <th>Source</th>
+                    <th>DOI</th>
+                    <th>Sample Type</th>
+                    <th>Element</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#data').DataTable({
+                "dom": '<"toolbar">frtip',
+                ajax: 'api/get_data',
+                pageLength: 15,
+                columns: [
+                    {data: 'authors'},
+                    {data: 'year'},
+                    {data: 'source'},
+                    {data: 'doi', orderable: false, searchable: false},
+                    {data: 'sample_type'},
+                    {data: 'element'}
+                ]
+            });
+            $("div.toolbar").html('<b>Welcome to IsoriteDB!</b>');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{% extends "table.html" %}
+{% from 'bootstrap5/form.html' import render_form %}
+
+{% block content %}
+    {{ before_form|safe }}
+    {{ render_form(form) }}
+    {{ after_form|safe }}
+    <hr>
+    {{ super() }}
+{% endblock %}
+{% block scripts %}
+    {{ super() }}
+    <script src='https://www.google.com/recaptcha/api.js' async defer></script>
+{% endblock %}
