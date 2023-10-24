@@ -17,6 +17,13 @@ ROLE = dict(deactivated = DEACTIVATED,
 __all__ = ['DEACTIVATED', 'UNVERIFIED', 'VERIFIED', 'MODERATOR', 'ADMIN', 'ROLE',
            'required', 'verified_required', 'moderator_required', 'admin_required']
 
+def role_description(auth_level):
+    for k, v in ROLE.items():
+        if v == auth_level:
+            return k
+    else:
+        return auth_level
+
 def required(auth_level):
     def wrap_func(func):
         @wraps(func)

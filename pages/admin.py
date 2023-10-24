@@ -52,7 +52,7 @@ def update_signup_link():
 def change_role():
     user_list = database.User.get_all()
 
-    form = change_level_form([(user.id, f"{user.name} | {user.email}") for user in user_list])
+    form = change_level_form([(user.id, f"{auth.role_description(user.auth_level)} | {user.name} | {user.email}") for user in user_list])
 
     if form.validate_on_submit():
         user = database.User.get_one(id=form.user.data, or_none=True)
@@ -62,7 +62,7 @@ def change_role():
         elif user.auth_level > auth.ADMIN:
             render.flash_error('Cannot change user role for power admins')
         else:
-            user.update_entry(user, auth_level=new_auth_level)
+            user.update_entry(user, user.id, auth_level=new_auth_level)
             render.flash_success('User role changed')
     return render.template('form.html', form=form)
 
