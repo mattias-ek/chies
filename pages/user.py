@@ -87,12 +87,12 @@ def signup():
             render.flash_error('A user account with theis email already exists')
         else:
             if signup_key is not None and signup_key == database.Attrs.get('signup_key'):
-                auth_level = auth.VERIFIED
+                verified = True
             else:
                 render.flash_message('Your account has to be verified by an administrator before you can upload data')
-                auth_level = auth.UNVERIFIED
+                verified = False
 
-            new_user = database.User.new_user(form.name.data, form.email.data, form.password.data, auth_level)
+            new_user = database.User.new_user(form.name.data, form.email.data, form.password.data, verified)
             render.flash_success('You have successfully signed up')
             logout_user()
             login_user(new_user)

@@ -222,16 +222,13 @@ class User(UserMixin, ModelMixin, db.Model):
 
     @classmethod
     @with_app_context
-    def new_user(cls, name, email, password, signup_key=None):
-        if signup_key is not None and signup_key == Attrs.get('signup_key'):
-            auth_level = auth.VERIFIED
-        else:
-            auth_level = auth.UNVERIFIED
-
+    def new_user(cls, name, email, password, verified = False):
+        auth_level = auth.VERIFIED if verified else auth.UNVERIFIED
         new_user = cls(name = name,
                        email = email,
                        password = generate_password_hash(password),
                        auth_level = auth_level)
+
 
         add(new_user)
         commit()
