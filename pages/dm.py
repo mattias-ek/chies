@@ -46,6 +46,7 @@ def add_citation_form(button_text = 'Submit',
 
 def add_data_form(citation_id = None,
                   button_text = 'Submit',
+                  multi_element = False,
                   **defaults):
     if citation_id:
         citation_choices = database.Citation.get_citations(sort=True, id=citation_id)
@@ -58,10 +59,15 @@ def add_data_form(citation_id = None,
     sample_type_choices = ['<New Sample Type>'] + database.Data.get_all('sample_type', distinct=True)
 
     def element_validator(form, field):
-        elements = [e.strip().capitalize() for e in field.data.split(',')]
-        for e in elements:
-            if len(e) > 2 or len(e) < 1:
-                raise forms.ValidationError('Invalid element symbol')
+        if multi_element:
+            elements = [e.strip().capitalize() for e in field.data.split(',')]
+            for element in elements:
+                if len(element) > 2 or len(element) < 1:
+                    raise forms.ValidationError(f'Invalid element symbol ("{element}")')
+        else:
+            element = field.data
+            if len(element) > 2 or len(element) < 1:
+                raise forms.ValidationError(f'Invalid element symbol ("{element}")')
 
     class Form(forms.FlaskForm):
         citation = forms.IntSelectField('Citation:',
@@ -115,7 +121,7 @@ def add_citation():
 @dm.route('/add_data/<int:citation_id>', methods=['GET', 'POST'])
 @auth.verified_required
 def add_data(citation_id = None):
-    form = add_data_form(citation_id = citation_id)
+    form = add_data_form(citation_id = citation_id, multi_element=True)
     if form.validate_on_submit():
         try:
             elements = [e.strip().capitalize() for e in form.element.data.split(',')]
