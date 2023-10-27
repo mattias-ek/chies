@@ -114,7 +114,7 @@ def add_citation():
             render.flash_success('Citation added')
             return render.redirect('dm.add_data', citation_id=new_citation.id)
 
-    return render.template('form.html', form=form)
+    return render.template('form.html', form=form, markdown=add_citation_markdown())
 
 
 @dm.route('/add_data', methods=['GET', 'POST'])
@@ -137,7 +137,7 @@ def add_data(citation_id = None):
             render.flash_success('Data added')
             form = add_data_form(citation_id = citation_id, sample_type=form.sample_type.data)
 
-    return render.template('form.html', form=form)
+    return render.template('form.html', form=form, markdown=add_data_markdown())
 
 
 @dm.route('/edit', methods=['GET', 'POST'])
@@ -249,3 +249,34 @@ def edit_data(id):
     headings = ('User Name', 'Timestamp', 'Table', 'Item Id', 'Column', 'Old Value', 'New Value')
 
     return render.table('form_table.html', headings, reversed(results), form=form)
+
+def add_citation_markdown():
+    return dict(
+        before_form = """
+        ### Add Citation
+        This is the form for adding a citation to the database. Once submitted you will be taken to the form
+        to add data associated with this citation.
+        
+        - **Authors**: Please give author names as "First, N.; Second, N." etc. Use ";" to separate authors in the list.
+        - **Year**: Year of publication.
+        - **Journal**: If the Journal is not listed here, select "&lt;New&nbsp;Journal&gt;" and type the journal name in the
+        **New&nbsp;Journal** field.
+        - **DOI**: The Digital Object Identifier. This should be listed on the articles journal website.
+        - **ADS**: The link to the article entry on the [Astrophysics Data System](https://ui.adsabs.harvard.edu).
+        """
+    )
+
+
+def add_data_markdown():
+    return dict(
+        before_form="""
+        ### Add Data
+        This is the form for adding a stable isotope data associated with a given citation to the database.
+
+        - **Citation**: Select the citation this data is associated with.
+        - **Sample Type**: The sample type that was analysed for the given element(s). If the sample typ[e is not 
+        listed here, select "&lt;New&nbsp;Sample&nbsp;Type&gt;" and type the 
+        sample type in the **New&nbsp;Sample&nbsp;Type** field.
+        - **Element**: The element symbol. Multiple elements can be added by separating them with ", ".
+        """
+    )
