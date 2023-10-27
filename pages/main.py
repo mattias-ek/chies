@@ -42,8 +42,8 @@ def search_markdown():
         ### Search Results
         """,
         before_form = """
-        ### Welcome to the ChETEC-INFRA Element Search
+        ### Welcome to the ChETEC-INFRA Stable Isotope Database
         
         Select your sample type and element of interest from the form below and the papers
-        containing this type of data will be shown.
+        containing this type of data will be displayed.
         """)
