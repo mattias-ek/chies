@@ -57,6 +57,12 @@ def add_data_form(citation_id = None,
 
     sample_type_choices = ['<New Sample Type>'] + database.Data.get_all('sample_type', distinct=True)
 
+    def element_validator(form, field):
+        elements = [e.strip().capitalize() for e in field.data.split(',')]
+        for e in elements:
+            if len(e) > 2 or len(e) < 1:
+                raise forms.ValidationError('Invalid element symbol')
+
     class Form(forms.FlaskForm):
         citation = forms.IntSelectField('Citation:',
                                   choices = citation_choices,
@@ -70,7 +76,7 @@ def add_data_form(citation_id = None,
                                              validators=[forms.validators.Length(0, 150)])
         element = forms.StringField('Element:',
                                   default=defaults.get('element', None),
-                                  validators=[forms.validators.InputRequired(), forms.validators.Length(1, 2)])
+                                  validators=[forms.validators.InputRequired(), element_validator])
         button = forms.SubmitField(button_text)
 
     return Form()
@@ -100,7 +106,6 @@ def add_citation():
             render.flash_error(str(err))
         else:
             render.flash_success('Citation added')
-            print(new_citation.id)
             return render.redirect('dm.add_data', citation_id=new_citation.id)
 
     return render.template('form.html', form=form)
@@ -111,13 +116,15 @@ def add_citation():
 @auth.verified_required
 def add_data(citation_id = None):
     form = add_data_form(citation_id = citation_id)
-
     if form.validate_on_submit():
         try:
-            new_data = database.Data.new_entry(auth.current_user,
-                                              citation_id=form.citation.data,
-                                              sample_type=form.sample_type,
-                                              element=form.element.data.capitalize())
+            elements = [e.strip().capitalize() for e in form.element.data.split(',')]
+            for element in elements:
+                new_data = database.Data.new_entry(auth.current_user,
+                                                  creator_id=auth.current_user.id,
+                                                  citation_id=form.citation.data,
+                                                  sample_type=form.sample_type.choice,
+                                                  element=element)
         except Exception as err:
             render.flash_error(str(err))
         else:
