@@ -9,12 +9,6 @@ dm = Blueprint('dm', __name__)
 #############
 ### Forms ###
 #############
-class EditDataFrom(forms.FlaskForm):
-    id = forms.SelectField('Data Id:', validators=[forms.validators.InputRequired()], coerce=int)
-    sample_type = forms.StringField('Sample Type:', validators=[forms.validators.Length(0, 150)])
-    element = forms.StringField('Element:', validators=[forms.validators.InputRequired(), forms.validators.Length(1, 2)])
-
-
 def add_citation_form(button_text = 'Submit',
                       allowed_doi = '', **defaults):
     def doi_validator(form, field):
@@ -87,6 +81,9 @@ def add_data_form(citation_id = None,
 
     return Form()
 
+class YesNoForm(forms.FlaskForm):
+    yes = forms.SubmitField('Yes')
+    no = forms.SubmitField('No')
 
 #############
 ### Pages ###
@@ -155,24 +152,16 @@ def edit():
     class Form(forms.FlaskForm):
         table_ = forms.SelectField('Table', choices = ['Citation', 'Data'], validators=[forms.validators.InputRequired()])
         id = forms.IntegerField('Id:', validators=[forms.validators.InputRequired(), data_id_validator])
-        button = forms.SubmitField('Edit')
+        edit = forms.SubmitField('Edit')
+        delete = forms.SubmitField('Delete')
 
     form = Form()
 
     if form.validate_on_submit():
-        if form.table_.data == 'Citation':
-            item = database.Citation.get_one(id = form.id.data, or_none = True)
-            address = 'dm.edit_citation'
-        else:
-            item = database.Data.get_one(id = form.id.data, or_none = True)
-            address = 'dm.edit_data'
-
-        if item is None:
-            render.flash_error('This Id does not exist')
-        elif auth.current_user.auth_level < auth.MODERATOR and item.creator_id != auth.current_user.id:
-            render.flash_error('You are not authorised to edit data created by someone else')
-        else:
-            return render.redirect(address, id = item.id)
+        if form.edit.data:
+            return render.redirect(f'dm.edit_{form.table_.data.lower()}', id=form.id.data)
+        elif form.delete.data:
+            return render.redirect(f'dm.delete_{form.table_.data.lower()}', id=form.id.data)
 
     citations = dict(database.Citation.get_citations())
     headings = ('Citation Id', 'Citation', 'Data Id', 'Sample Type', 'Element')
@@ -182,17 +171,43 @@ def edit():
     return render.table('form_table.html', headings, results, search=True,
                         form=form)
 
+@dm.route('/delete_citation/<int:id>', methods=['GET', 'POST'])
+@auth.verified_required
+def delete_citation(id):
+    citation = database.Citation.get_one(id=id, or_none=True)
+    if citation is None:
+        render.flash_error('Invalid citation id')
+        return render.redirect('dm.edit')
+
+    if auth.current_user.auth_level < auth.MODERATOR and citation.creator_id != auth.current_user.id:
+        render.flash_error('You are not authorised to edit entries created by someone else')
+        return render.redirect('dm.edit')
+
+    form = YesNoForm()
+
+    if form.validate_on_submit():
+        if form.yes.data:
+            render.flash_success('Entry was deleted')
+            database.Citation.delete(auth.current_user, citation)
+        else:
+            render.flash_message('Entry was not deleted')
+            return render.redirect('dm.edit')
+
+    return render.template('form.html', form=form, markdown=markdown_delete_thing('citation'))
+
+
+
 @dm.route('/edit_citation/<int:id>', methods=['GET', 'POST'])
 @auth.verified_required
 def edit_citation(id):
     citation = database.Citation.get_one(id=id, or_none=True)
     if citation is None:
         render.flash_error('Invalid citation id')
-        render.redirect('dm.edit')
+        return render.redirect('dm.edit')
 
     if auth.current_user.auth_level < auth.MODERATOR and citation.creator_id != auth.current_user.id:
         render.flash_error('You are not authorised to edit data created by someone else')
-        render.redirect('dm.edit')
+        return render.redirect('dm.edit')
 
     form = add_citation_form(button_text='Edit', allowed_doi=citation.doi,
                              authors=citation.authors,
@@ -220,6 +235,31 @@ def edit_citation(id):
 
     return render.table('form_table.html', headings, reversed(results), form=form)
 
+@dm.route('/delete_data/<int:id>', methods=['GET', 'POST'])
+@auth.verified_required
+def delete_data(id):
+    data = database.Data.get_one(id=id, or_none=True)
+    if data is None:
+        render.flash_error('Invalid data id')
+        return render.redirect('dm.edit')
+
+    if auth.current_user.auth_level < auth.MODERATOR and data.creator_id != auth.current_user.id:
+        render.flash_error('You are not authorised to edit entries created by someone else')
+        return render.redirect('dm.edit')
+
+    form = YesNoForm()
+
+    if form.validate_on_submit():
+        if form.yes.data:
+            database.Data.delete(auth.current_user, data)
+            render.flash_success('Entry was deleted')
+        else:
+            render.flash_message('Entry was not deleted')
+            return render.redirect('dm.edit')
+
+    return render.template('form.html', form=form, markdown=markdown_delete_thing('data'))
+
+
 @dm.route('/edit_data/<int:id>', methods=['GET', 'POST'])
 @auth.verified_required
 def edit_data(id):
@@ -229,7 +269,7 @@ def edit_data(id):
         render.redirect('dm.edit')
 
     if auth.current_user.auth_level < auth.MODERATOR and data.creator_id != auth.current_user.id:
-        render.flash_error('You are not authorised to edit data created by someone else')
+        render.flash_error('You are not authorised to edit entries created by someone else')
         render.redirect('dm.edit')
 
     form = add_data_form(citation_id = data.citation_id,
@@ -249,6 +289,7 @@ def edit_data(id):
     headings = ('User Name', 'Timestamp', 'Table', 'Item Id', 'Column', 'Old Value', 'New Value')
 
     return render.table('form_table.html', headings, reversed(results), form=form)
+
 
 def add_citation_markdown():
     return dict(
@@ -278,5 +319,13 @@ def add_data_markdown():
         listed here, select "&lt;New&nbsp;Sample&nbsp;Type&gt;" and type the 
         sample type in the **New&nbsp;Sample&nbsp;Type** field.
         - **Element**: The element symbol. Multiple elements can be added by separating them with ", ".
+        """
+    )
+
+def markdown_delete_thing(thing):
+    return dict(
+        before_form=f"""
+        ### Delete {thing}
+        Are you sure you want to delete the {thing}?
         """
     )

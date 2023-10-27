@@ -34,6 +34,9 @@ def add(model_item):
 def commit():
     db.session.commit()
 
+def delete(item):
+    db.session.delete(item)
+
 def with_app_context(func):
     @wraps(func)
     def call_func_with_context(*args, **kwargs):
@@ -290,6 +293,15 @@ class Edit(ModelMixin, db.Model):
         add(new_edit)
         return new_edit
 
+    @classmethod
+    def new_deleted(cls, user, item):
+        new_edit = Edit(user_id=user.id,
+                        datetime=datetime.datetime.now(),
+                        table=item.__class__.__name__,
+                        item_id=item.id,
+                        column='DELETED')
+        add(new_edit)
+        return new_edit
 
 class Citation(ModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -321,6 +333,18 @@ class Citation(ModelMixin, db.Model):
 
         return citations
 
+    @classmethod
+    @with_app_context
+    def delete(cls, user, item):
+        item = cls.get_one(id=item if type(item) is int else item.id)
+
+        data = Data.get_all(citation_id = item.id)
+        for d in data:
+            Data.delete(user, d)
+
+        Edit.new_deleted(user, item)
+        delete(item)
+        commit()
 
 class Data(ModelMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -380,6 +404,20 @@ class Data(ModelMixin, db.Model):
                                   link))
 
         return headings, search_results
+
+    @classmethod
+    @with_app_context
+    def delete(cls, user, item):
+        item = cls.get_one(id=item if type(item) is int else item.id)
+        Edit.new_deleted(user, item)
+        delete(item)
+        commit()
+
+
+
+
+
+
 
 
 
