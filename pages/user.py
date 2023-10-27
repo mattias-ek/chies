@@ -48,17 +48,21 @@ def login():
         user = database.User.get_one(email=form.email.data, or_none=True)
         if user:
             if database.User.verify_password(user.id, form.password.data):
-                login_user(user)
-                render.flash_success(f'Welcome {user.name}')
-                return render.redirect('main.search')
+                if user.auth_level <= auth.DEACTIVATED:
+                    render.flash_error(f'This account has been deactivated. Please contact an administrator.')
+                    return render.template('form.html', form=form, markdown=markdown_login())
+                else:
+                    login_user(user)
+                    render.flash_success(f'Welcome {user.name}')
+                    return render.redirect('main.search')
             else:
                 render.flash_error('Invalid password')
-                return render.template('form.html', form=form)
+                return render.template('form.html', form=form, markdown=markdown_login())
         else:
             render.flash_error('No account exists with this email')
-            return render.template('form.html', form=form)
+            return render.template('form.html', form=form, markdown=markdown_login())
     else:
-        return render.template('form.html', form=form, markdown=login_text())
+        return render.template('form.html', form=form, markdown=markdown_login())
 
 @user.route('/logout')
 @auth.required(auth.DEACTIVATED)
@@ -117,7 +121,7 @@ def change_password():
 ############
 ### Text ###
 ############
-def login_text():
+def markdown_login():
     return dict(
         after_form = f"""
         <br>
