@@ -21,8 +21,8 @@ class SearchForm(forms.FlaskForm):
 @main.route('/search', methods=['GET', 'POST'])
 def search():
     form = SearchForm()
-    form.sample_type.choices = database.Data.get_all('sample_type', distinct=True)
-    form.element.choices = database.Data.get_all('element', distinct=True)
+    form.sample_type.choices = sorted(database.Data.get_all('sample_type', distinct=True))
+    form.element.choices = sorted(database.Data.get_all('element', distinct=True))
 
     if form.validate_on_submit():
         headings, results = database.Data.get_search(sample_type=form.sample_type.data,
