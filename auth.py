@@ -30,7 +30,7 @@ def required(auth_level):
         def check_auth_level(*args, **kwargs):
             if not current_user.is_authenticated:
                 render.flash_error('You must be logged in to view this page')
-                return render.redirect('main.search')
+                return render.redirect('main.search'), 401
             elif current_user.auth_level >= auth_level:
                 return func(*args, **kwargs)
             else:
@@ -40,7 +40,7 @@ def required(auth_level):
                     render.flash_error('This account has not yet been verified by an moderator')
 
                 render.flash_error('You are not authorised to view this page')
-                return render.redirect('main.search')
+                return render.redirect('main.search'), 402
 
         return check_auth_level
 

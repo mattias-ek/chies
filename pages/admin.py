@@ -64,7 +64,7 @@ def change_role():
         elif user.auth_level > auth.current_user.auth_level:
             render.flash_error('You cannot change the user role for someone with a higher role than your own.')
         else:
-            user.update_entry(user, user.id, auth_level=new_auth_level)
+            user.update_entry(auth.current_user.id, user.id, auth_level=new_auth_level)
             render.flash_success('User role changed')
     return render.template('form.html', form=form, markdown=markdown_change_role())
 

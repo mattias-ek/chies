@@ -30,25 +30,18 @@ def add_citation_form(button_text = 'Submit',
     class Form(forms.FlaskForm):
         authors = forms.StringField('Authors:', default=defaults.get('authors', None), validators=[forms.validators.Length(1, 150)])
         year = forms.IntegerField('Year:', default=defaults.get('year', 2023), validators=[forms.validators.NumberRange(1850, 2050)])
-        journal = forms.NewEntrySelectField('Journal:', 'journal_new', journal_list, default=defaults.get('journal', 0), validators=[forms.validators.InputRequired()])
-        journal_new = forms.StringField('New Journal:', validators=[forms.validators.Length(0, 150)])
-        doi = forms.StringField('DOI:', default=defaults.get('doi', None), validators=[forms.validators.InputRequired(), forms.validators.Length(1, 150), doi_validator])
+        journal = forms.NewEntrySelectField('Journal:', 'journal_new', journal_list, default=defaults.get('journal', 0), validators=[forms.validators.DataRequired()])
+        journal_new = forms.StringField('New Journal:', default = '', validators=[forms.validators.Length(0, 150)])
+        doi = forms.StringField('DOI:', default=defaults.get('doi', None), validators=[forms.validators.DataRequired(), forms.validators.Length(1, 150), doi_validator])
         ads = forms.StringField('ADS:', default=defaults.get('ads', None), validators=[forms.validators.Length(0, 150), ads_validator])
         button = forms.SubmitField(button_text)
 
     return Form()
 
-def add_data_form(citation_id = None,
+def add_data_form(citation_choices = [],
                   button_text = 'Submit',
                   multi_element = False,
                   **defaults):
-    if citation_id:
-        citation_choices = database.Citation.get_citations(sort=True, id=citation_id)
-    else:
-        citation_choices = database.Citation.get_citations(sort=True)
-
-    if len(citation_choices) == 0:
-        render.flash_error('Invalid citation id')
 
     sample_type_choices = ['<New Sample Type>'] + database.Data.get_all('sample_type', distinct=True)
 
@@ -68,15 +61,15 @@ def add_data_form(citation_id = None,
                                   choices = citation_choices,
                                   default=defaults.get('citation', None),
                                   enumerate=False,
-                                  validators=[forms.validators.InputRequired()])
+                                  validators=[forms.validators.DataRequired()])
         sample_type = forms.NewEntrySelectField('Sample Type:', 'sample_type_new', sample_type_choices,
-                                               default=defaults.get('sample_type', None),
-                                               validators=[forms.validators.InputRequired()])
-        sample_type_new = forms.StringField('New Sample Type:',
+                                               default=defaults.get('sample_type', 0),
+                                               validators=[forms.validators.DataRequired()])
+        sample_type_new = forms.StringField('New Sample Type:', default = '',
                                              validators=[forms.validators.Length(0, 150)])
         element = forms.StringField('Element:',
                                   default=defaults.get('element', None),
-                                  validators=[forms.validators.InputRequired(), element_validator])
+                                  validators=[forms.validators.DataRequired(), element_validator])
         button = forms.SubmitField(button_text)
 
     return Form()
@@ -97,9 +90,10 @@ def add_citation():
     form = add_citation_form()
 
     if form.validate_on_submit():
+        current_user_id = auth.current_user.id
         try:
-            new_citation = database.Citation.new_entry(auth.current_user,
-                                                          creator_id = auth.current_user.id,
+            new_citation = database.Citation.new_entry(current_user_id,
+                                                          creator_id = current_user_id,
                                                           authors = form.authors.data,
                                                           year = form.year.data,
                                                           journal=form.journal.choice,
@@ -118,12 +112,32 @@ def add_citation():
 @dm.route('/add_data/<int:citation_id>', methods=['GET', 'POST'])
 @auth.verified_required
 def add_data(citation_id = None):
-    form = add_data_form(citation_id = citation_id, multi_element=True)
+    if citation_id:
+        if auth.current_user.auth_level >= auth.MODERATOR:
+            citation_choices = database.Citation.get_citations(sort=True, id=citation_id)
+        else:
+            citation_choices = database.Citation.get_citations(sort=True, id=citation_id,
+                                                                creator_id=auth.current_user.id)
+        if len(citation_choices) == 0:
+            render.flash_error('This citation either does not exist or you are not allowed to add data to it')
+            return render.redirect('dm.add_data')
+    else:
+        if auth.current_user.auth_level >= auth.MODERATOR:
+            citation_choices = database.Citation.get_citations(sort=True)
+        else:
+            citation_choices = database.Citation.get_citations(sort=True,
+                                                                creator_id=auth.current_user.id)
+        if len(citation_choices) == 0:
+            render.flash_error('There are currently no citations you can add data to')
+
+    form = add_data_form(citation_choices = citation_choices,
+                         citation = citation_id,
+                         multi_element=True)
     if form.validate_on_submit():
         try:
             elements = [e.strip().capitalize() for e in form.element.data.split(',')]
             for element in elements:
-                new_data = database.Data.new_entry(auth.current_user,
+                new_data = database.Data.new_entry(auth.current_user.id,
                                                   creator_id=auth.current_user.id,
                                                   citation_id=form.citation.data,
                                                   sample_type=form.sample_type.choice,
@@ -132,7 +146,6 @@ def add_data(citation_id = None):
             render.flash_error(str(err))
         else:
             render.flash_success('Data added')
-            form = add_data_form(citation_id = citation_id, sample_type=form.sample_type.data)
 
     return render.template('form.html', form=form, markdown=add_data_markdown())
 
@@ -188,13 +201,12 @@ def delete_citation(id):
     if form.validate_on_submit():
         if form.yes.data:
             render.flash_success('Entry was deleted')
-            database.Citation.delete(auth.current_user, citation)
+            database.Citation.delete(auth.current_user.id, citation.id)
         else:
             render.flash_message('Entry was not deleted')
             return render.redirect('dm.edit')
 
     return render.template('form.html', form=form, markdown=markdown_delete_thing('citation'))
-
 
 
 @dm.route('/edit_citation/<int:id>', methods=['GET', 'POST'])
@@ -218,7 +230,7 @@ def edit_citation(id):
                              )
 
     if form.validate_on_submit():
-        edited = database.Citation.update_entry(auth.current_user, citation.id,
+        edited = database.Citation.update_entry(auth.current_user.id, citation.id,
                                                 authors=form.authors.data,
                                                 year=form.year.data,
                                                 journal=form.journal.choice,
@@ -251,7 +263,7 @@ def delete_data(id):
 
     if form.validate_on_submit():
         if form.yes.data:
-            database.Data.delete(auth.current_user, data)
+            database.Data.delete(auth.current_user.id, data.id)
             render.flash_success('Entry was deleted')
         else:
             render.flash_message('Entry was not deleted')
@@ -266,19 +278,25 @@ def edit_data(id):
     data = database.Data.get_one(id=id, or_none=True)
     if data is None:
         render.flash_error('Invalid data id')
-        render.redirect('dm.edit')
+        return render.redirect('dm.edit')
 
     if auth.current_user.auth_level < auth.MODERATOR and data.creator_id != auth.current_user.id:
         render.flash_error('You are not authorised to edit entries created by someone else')
-        render.redirect('dm.edit')
+        return render.redirect('dm.edit')
 
-    form = add_data_form(citation_id = data.citation_id,
+    citation_choices = database.Citation.get_citations(sort=True, id=data.citation_id)
+
+    form = add_data_form(citation_choices = citation_choices,
+                         citation=data.citation_id,
                          sample_type=data.sample_type,
                          element=data.element,
                          button_text='Edit')
 
     if form.validate_on_submit():
-        edited = database.Data.update_entry(auth.current_user, data.id, sample_type = form.sample_type.choice, element=form.element.data)
+        edited = database.Data.update_entry(auth.current_user.id,
+                                            data.id,
+                                            sample_type = form.sample_type.choice,
+                                            element=form.element.data.capitalize())
         if edited:
             render.flash_success('Entry was updated')
         else:
@@ -321,6 +339,7 @@ def add_data_markdown():
         - **Element**: The element symbol. Multiple elements can be added by separating them with ", ".
         """
     )
+
 
 def markdown_delete_thing(thing):
     return dict(

@@ -110,8 +110,8 @@ def change_password():
     user = auth.current_user
     form = ChangePasswordForm()
     if form.validate_on_submit():
-        if database.User.verify_password(user, form.old_password.data):
-            database.User.update_password(user, form.new_password.data)
+        if database.User.verify_password(user.id, form.old_password.data):
+            database.User.update_password(user.id, form.new_password.data)
             render.flash_success('Password Updated')
             render.redirect('main.search')
         else:

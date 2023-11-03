@@ -160,27 +160,27 @@ class ModelMixin:
 
     @classmethod
     @with_app_context
-    def new_entry(cls, current_user, **columns):
+    def new_entry(cls, current_user_id, **columns):
         new_item = cls(**columns)
 
         add(new_item)
         commit()
 
-        Edit.new_created(current_user, new_item)
+        Edit.new_created(current_user_id, new_item)
         commit()
 
         return cls.get_one(id = new_item.id)
 
     @classmethod
     @with_app_context
-    def update_entry(cls, current_user, entry_id, **columns):
-        item = cls.get_one(id = entry_id if type(entry_id) is int else entry_id.id)
+    def update_entry(cls, current_user_id, entry_id, **columns):
+        item = cls.get_one(id = entry_id)
         updated = []
         for column, new_value in columns.items():
             old_value = getattr(item, column)
             if new_value != old_value:
                 setattr(item, column, new_value)
-                Edit.new_edit(current_user, item, column, new_value, old_value)
+                Edit.new_edit(current_user_id, item, column, new_value, old_value)
                 updated.append(column)
             else:
                 continue
@@ -242,12 +242,12 @@ class User(UserMixin, ModelMixin, db.Model):
 
     @classmethod
     def verify_password(cls, user_id, password):
-        user = cls.get_one(id = user_id if type(user_id) is int else user_id.id)
+        user = cls.get_one(id = user_id)
         return check_password_hash(user.password, password)
 
     @classmethod
     def update_password(cls, user_id, new_password):
-        user = cls.get_one(id=user_id if type(user_id) is int else user_id.id)
+        user = cls.get_one(id=user_id)
 
         user.password = generate_password_hash(new_password)
         add(user)
@@ -256,7 +256,10 @@ class User(UserMixin, ModelMixin, db.Model):
 
 
     def __repr__(self):
-        return f'<User: {self.username}>'
+        return f'<User: {self.name}>'
+
+    def __str__(self):
+        return self.name
 
 
 class Edit(ModelMixin, db.Model):
@@ -272,8 +275,8 @@ class Edit(ModelMixin, db.Model):
     new_value = db.Column(db.String(150))
 
     @classmethod
-    def new_created(cls, user, item):
-        new_edit = Edit(user_id=user.id,
+    def new_created(cls, user_id, item):
+        new_edit = Edit(user_id=user_id,
                         datetime=datetime.datetime.now(),
                         table=item.__class__.__name__,
                         item_id=item.id,
@@ -282,8 +285,8 @@ class Edit(ModelMixin, db.Model):
         return new_edit
 
     @classmethod
-    def new_edit(cls, user, item, column, new_value, old_value):
-        new_edit = Edit(user_id=user.id,
+    def new_edit(cls, user_id, item, column, new_value, old_value):
+        new_edit = Edit(user_id=user_id,
                         datetime=datetime.datetime.now(),
                         table=item.__class__.__name__,
                         item_id=item.id,
@@ -294,11 +297,11 @@ class Edit(ModelMixin, db.Model):
         return new_edit
 
     @classmethod
-    def new_deleted(cls, user, item):
-        new_edit = Edit(user_id=user.id,
+    def new_deleted(cls, user_id, item_id, table):
+        new_edit = Edit(user_id=user_id,
                         datetime=datetime.datetime.now(),
-                        table=item.__class__.__name__,
-                        item_id=item.id,
+                        table=table,
+                        item_id=item_id,
                         column='DELETED')
         add(new_edit)
         return new_edit
@@ -335,15 +338,15 @@ class Citation(ModelMixin, db.Model):
 
     @classmethod
     @with_app_context
-    def delete(cls, user, item):
-        item = cls.get_one(id=item if type(item) is int else item.id)
+    def delete(cls, user_id, item_id):
+        item = cls.get_one(id=item_id)
 
-        data = Data.get_all(citation_id = item.id)
+        data = Data.get_all(citation_id = item_id)
         for d in data:
-            Data.delete(user, d)
+            Data.delete(user_id, d.id)
 
-        Edit.new_deleted(user, item)
         delete(item)
+        Edit.new_deleted(user_id, item_id, cls.__name__)
         commit()
 
 class Data(ModelMixin, db.Model):
@@ -407,10 +410,10 @@ class Data(ModelMixin, db.Model):
 
     @classmethod
     @with_app_context
-    def delete(cls, user, item):
-        item = cls.get_one(id=item if type(item) is int else item.id)
-        Edit.new_deleted(user, item)
+    def delete(cls, user_id, item_id):
+        item = cls.get_one(id=item_id)
         delete(item)
+        Edit.new_deleted(user_id, item_id, cls.__name__)
         commit()
 
 

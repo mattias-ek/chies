@@ -5,10 +5,12 @@ from flask_login import LoginManager
 
 import database, auth, config
 
-
-def create_app(test_config=None):
+def create_app(test_config=None, testing=False):
     app = Flask(__name__)
-    app.config.from_object(config.Config)
+    if testing:
+        app.config.from_object(config.Test)
+    else:
+        app.config.from_object(config.Config)
     login_manager = LoginManager()
     login_manager.anonymous_user = database.AnonymousUser
     
@@ -17,7 +19,7 @@ def create_app(test_config=None):
     app.register_blueprint(pages.dm.dm, url_prefix='/dm')
     app.register_blueprint(pages.user.user, url_prefix='/user')
     app.register_blueprint(pages.admin.admin, url_prefix='/admin')
-    
+
     csrf = CSRFProtect(app)
     bootstrap = Bootstrap5(app)
     login_manager.init_app(app)

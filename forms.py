@@ -38,6 +38,8 @@ class IntSelectField(SelectField):
 class NewEntrySelectField(SelectField):
     def __init__(self, label, new_entry_field, choices, **kwargs):
         validators = kwargs.pop('validators', []) + [self._validator_]
+        if type(default:=kwargs.get('default', None)) == int:
+            kwargs['default'] = choices[default] if default < len(choices) else None
         self.new_entry_field = new_entry_field
         self.choice = None
 
@@ -53,6 +55,6 @@ class NewEntrySelectField(SelectField):
             self.choice = new_entry_field.data
         elif new_entry_field.data != '':
             raise ValidationError(
-                f'Select {field.choices[0]} from this list above to create a new entry')
+                f'Select {field.choices[0]} from the list above to create a new entry')
         else:
             self.choice = field.data
