@@ -395,7 +395,10 @@ class Data(ModelMixin, db.Model):
                 element = result.element
 
             citation = Citation.get_one(id=result.citation_id)
-            link = f'<a href="https://doi.org/{citation.doi}">DOI</a>'
+            if citation.doi.startswith('https://'):
+                link = f'<a href="{citation.doi}">DOI</a>'
+            else:
+                link = f'<a href="https://doi.org/{citation.doi}">DOI</a>'
             if citation.ads:
                 link += f'/<a href="{citation.ads}">ADS</a>'
 

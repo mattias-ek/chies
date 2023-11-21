@@ -1,12 +1,12 @@
 from wtforms import SelectField, StringField, PasswordField, SubmitField, IntegerField
-from wtforms import SelectMultipleField, EmailField
+from wtforms import SelectMultipleField, EmailField, BooleanField
 from wtforms import validators, ValidationError
 from flask_wtf import FlaskForm
 from flask_wtf.recaptcha import RecaptchaField
 
 
 __all__ = ['SelectField', 'StringField', 'PasswordField', 'SubmitField', 'IntegerField',
-           'SelectMultipleField', 'EmailField', 'RecaptchaField',
+           'SelectMultipleField', 'EmailField', 'RecaptchaField', 'BooleanField',
            'validators', 'ValidationError', 'FlaskForm',
            'IntSelectField', 'NewEntrySelectField']
 

@@ -292,3 +292,57 @@ def dm_remove(client, allowed, citation_id, data_id):
         assert len(database.Data.get_all()) == ndata
         assert len(database.Edit.get_all()) == nedits
         assert len(database.Data.get_all(citation_id=citation_id)) == ncitationdata
+
+def test_citation_doi(client, verified, modifies_db):
+    ncitations = len(database.Citation.get_all())
+
+    # Add citation with doi
+    citation = dict(authors='Test, A; Test, B',
+                    year='2023',
+                    journal='Nature Astronomy',
+                    doi='something/10.1234/test',
+                    ads='')
+
+    ncitations += 1
+    response = client.post('/dm/add_citation', data=citation, follow_redirects=True)
+    assert response.request.base_url.endswith(f'add_data/{ncitations}')
+    assert len(database.Citation.get_all()) == ncitations
+    assert database.Citation.get_one(id=ncitations).doi == '10.1234/test'
+
+    # Add citation
+    citation['nodoi'] = True
+
+    response = client.post('/dm/add_citation', data=citation, follow_redirects=True)
+    assert response.request.base_url.endswith(f'add_citation')
+    assert len(database.Citation.get_all()) == ncitations
+
+    # Edit citation
+    response = client.post(f'/dm/edit_citation/{ncitations}', data={'doi': '    10.987/abc'}, follow_redirects=True)
+    assert database.Citation.get_one(id=ncitations).doi == '10.987/abc'
+    assert len(database.Citation.get_all()) == ncitations
+
+    # Add citation with url
+    citation['doi'] = 'https://www.citation.com/page '
+
+    ncitations += 1
+    response = client.post('/dm/add_citation', data=citation, follow_redirects=True)
+    assert response.request.base_url.endswith(f'add_data/{ncitations}')
+    assert len(database.Citation.get_all()) == ncitations
+    assert database.Citation.get_one(id=ncitations).doi == 'https://www.citation.com/page'
+
+    # Add citation
+    citation['nodoi'] = False
+
+    response = client.post('/dm/add_citation', data=citation, follow_redirects=True)
+    assert response.request.base_url.endswith(f'add_citation')
+    assert len(database.Citation.get_all()) == ncitations
+
+    # Edit citation
+    # nodoi must be passsed. It defaults to the right value somehow in real life but not in this test.
+    # Also the add citation test above fails if it is after this (But only if nodoi is given!) No clue why...
+    # Somehow it sets nodoi to True and the the value in the citation is ignored.
+    response = client.post(f'/dm/edit_citation/{ncitations}', data={'doi': '    https://www.reference.co.uk/page', 'nodoi': True}, follow_redirects=True)
+    assert database.Citation.get_one(id=ncitations).doi == 'https://www.reference.co.uk/page'
+    assert len(database.Citation.get_all()) == ncitations
+
+

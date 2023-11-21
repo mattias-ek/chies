@@ -6,19 +6,32 @@ import render, forms, auth, database
 
 dm = Blueprint('dm', __name__)
 
+def parse_doi(text):
+    if m := re.search(".*(10[.][\d.]*[/].*)$", text):
+        return m.group(1)
+    else:
+        return None
+
 #############
 ### Forms ###
 #############
 def add_citation_form(button_text = 'Submit',
                       allowed_doi = '', **defaults):
     def doi_validator(form, field):
-        doi = field.data
-        if m := re.search(".*(10[.][\d.]*[/].*)$", doi):
-            doi = m.group(1)
-            if doi in database.Citation.get_all('doi') and doi != allowed_doi:
-                raise forms.ValidationError('A citation with this DOI already exits')
+        if form.nodoi.data is False:
+            doi = parse_doi(field.data)
+            if doi is not None:
+                if doi in database.Citation.get_all('doi') and doi != allowed_doi:
+                    raise forms.ValidationError('A citation with this DOI already exits')
+            else:
+                raise forms.ValidationError('Invalid DOI')
         else:
-            raise forms.ValidationError('Invalid DOI')
+            url = field.data.strip()
+            if url.startswith('https://'):
+                if url in database.Citation.get_all('doi') and url != allowed_doi:
+                    raise forms.ValidationError('A citation with this URL already exits')
+            else:
+                raise forms.ValidationError('Invalid URL. Must start with "https://')
 
     def ads_validator(form, field):
         ads = field.data
@@ -29,12 +42,18 @@ def add_citation_form(button_text = 'Submit',
 
     class Form(forms.FlaskForm):
         authors = forms.StringField('Authors:', default=defaults.get('authors', None), validators=[forms.validators.Length(1, 150)])
-        year = forms.IntegerField('Year:', default=defaults.get('year', 2023), validators=[forms.validators.NumberRange(1850, 2050)])
+        year = forms.IntegerField('Year:', default=defaults.get('year', None), validators=[forms.validators.NumberRange(1850, 2050)])
         journal = forms.NewEntrySelectField('Journal:', 'journal_new', journal_list, default=defaults.get('journal', 0), validators=[forms.validators.DataRequired()])
         journal_new = forms.StringField('New Journal:', default = '', validators=[forms.validators.Length(0, 150)])
         doi = forms.StringField('DOI:', default=defaults.get('doi', None), validators=[forms.validators.DataRequired(), forms.validators.Length(1, 150), doi_validator])
+        nodoi = forms.BooleanField('No DOI, use URL instead', default=defaults.get('nodoi', False))
         ads = forms.StringField('ADS:', default=defaults.get('ads', None), validators=[forms.validators.Length(0, 150), ads_validator])
         button = forms.SubmitField(button_text)
+
+        def doiparsed(self):
+            data = self.doi.data
+            doi = parse_doi(data)
+            return doi if doi is not None else data.strip()
 
     return Form()
 
@@ -97,7 +116,7 @@ def add_citation():
                                                           authors = form.authors.data,
                                                           year = form.year.data,
                                                           journal=form.journal.choice,
-                                                          doi = form.doi.data,
+                                                          doi = form.doiparsed(),
                                                           ads = form.ads.data)
         except Exception as err:
             render.flash_error(str(err))
@@ -226,7 +245,8 @@ def edit_citation(id):
                              year=citation.year,
                              journal=citation.journal,
                              doi=citation.doi,
-                             ads=citation.ads
+                             ads=citation.ads,
+                             nodoi=citation.doi.startswith('https://')
                              )
 
     if form.validate_on_submit():
@@ -234,12 +254,13 @@ def edit_citation(id):
                                                 authors=form.authors.data,
                                                 year=form.year.data,
                                                 journal=form.journal.choice,
-                                                doi=form.doi.data,
+                                                doi=form.doiparsed(),
                                                 ads=form.ads.data)
         if edited:
             render.flash_success('Entry was updated')
         else:
             render.flash_message('No changes were made to the entry')
+        return render.redirect('dm.edit')
 
     results = database.Edit.get_all(('User.name', 'datetime', 'table', 'item_id', 'column',
                                      'old_value', 'new_value'), item_id=citation.id, table='Citation')
@@ -301,6 +322,7 @@ def edit_data(id):
             render.flash_success('Entry was updated')
         else:
             render.flash_message('No changes were made to the entry')
+        return render.redirect('dm.edit')
 
     results = database.Edit.get_all(('User.name', 'datetime', 'table', 'item_id', 'column',
                                      'old_value', 'new_value'), item_id=data.id, table='Data')
@@ -320,7 +342,8 @@ def add_citation_markdown():
         - **Year**: Year of publication.
         - **Journal**: If the Journal is not listed here, select "&lt;New&nbsp;Journal&gt;" and type the journal name in the
         **New&nbsp;Journal** field.
-        - **DOI**: The Digital Object Identifier. This should be listed on the articles journal website.
+        - **DOI**: The Digital Object Identifier. This should be listed on the articles journal website. If the citation
+        does not have a DOI tick the "No DOI" box and paste an url to the citation instead.
         - **ADS**: The link to the article entry on the [Astrophysics Data System](https://ui.adsabs.harvard.edu).
         """
     )

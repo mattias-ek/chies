@@ -48,7 +48,7 @@ def table(template, headings, results, result_types = None,
             elif result_type == 'number' or (result_type is None and isinstance(column, (int, float))):
                 column = f"{column}"
             else:
-               column = f"'{column}'"
+                column = f'"{column}"'
             row_data += f"{heading_ids[i]}: {column},\n"
         data.append(f"{{\n{row_data}}}, \n")
     data = ''.join(data)
